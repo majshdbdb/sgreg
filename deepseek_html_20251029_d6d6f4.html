@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Video Platform</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.0"></script>
+  <style>
+    /* Gaya dasar */
+    body {
+      overflow-x: hidden;
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      background-color: #f5f5f5;
+      color: #333;
+      transition: background-color 0.3s, color 0.3s;
+    }
+    header {
+      width: 100%;
+      padding: 15px;
+      box-sizing: border-box;
+      background-color: #eaeaea;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 1.5em;
+    }
+    header input {
+      padding: 8px;
+      font-size: 16px;
+      width: 90%;
+      max-width: 400px;
+    }
+    .toggle-container {
+      display: flex;
+      align-items: center;
+    }
+    .toggle-label {
+      margin-right: 10px;
+      font-size: 16px;
+    }
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 40px;
+      height: 20px;
+    }
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: 0.4s;
+      border-radius: 20px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 14px;
+      width: 14px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: 0.4s;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background-color: #2196F3;
+    }
+    input:checked + .slider:before {
+      transform: translateX(20px);
+    }
+    .dark-mode {
+      background-color: #121212;
+      color: #ffffff;
+    }
+    .dark-mode header {
+      background-color: #1e1e1e;
+    }
+    .video-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 15px;
+      padding: 15px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .video-item {
+      background: white;
+      padding: 10px;
+      border-radius: 5px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      text-align: center;
+    }
+    .video-item video {
+      width: 95%;
+      height: auto;
+      border-radius: 2px;
+    }
+    
+    /* Gaya untuk sistem login */
+    .auth-section {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+    }
+    
+    .auth-btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.3s ease;
+    }
+    
+    .auth-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+    }
+    
+    .logout-btn {
+      background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    }
+    
+    .login-prompt {
+      text-align: center;
+      padding: 40px 20px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+      margin: 20px auto;
+      max-width: 500px;
+    }
+    
+    .login-prompt h2 {
+      color: #333;
+      margin-bottom: 15px;
+    }
+    
+    .login-prompt p {
+      color: #666;
+      margin-bottom: 20px;
+    }
+    
+    .login-btn {
+      display: inline-block;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+    
+    .login-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+    
+    .not-found {
+      display: none;
+      text-align: center;
+      padding: 20px;
+      color: #dc3545;
+    }
+    
+    @media (max-width: 600px) {
+      header {
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+      }
+      .video-grid {
+        grid-template-columns: 1fr;
+      }
+      .auth-section {
+        flex-direction: column;
+        gap: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>My Video Platform</h1>
+    <input type="text" id="search" placeholder="Search videos..." onkeyup="searchVideos()" />
+    <div class="toggle-container">
+      <span class="toggle-label">Mode Gelap</span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="modeToggle" onclick="toggleMode()">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div class="auth-section" id="authSection">
+      <!-- Konten login/logout akan dimuat di sini -->
+    </div>
+  </header>
+  <main>
+    <div id="userContent">
+      <div class="video-grid" id="videoContainer">
+        <div class="video-item" data-title="Video Title 1" onclick="openVideo('CONTENT/content2.mp4', 'Video Title 1', 'LAGI MABAR SAMA SUDARA')">
+          <video>
+            <source src="CONTENT/content2.mp4" type="video/mp4" />
+            Your browser does not support the video tag.
+          </video>
+          <p>Video Title 1</p>
+        </div>
+        <div class="video-item" data-title="Video Title 2" onclick="openVideo('video2.mp4', 'Video Title 2', 'Deskripsi video kedua.')">
+          <video>
+            <source src="video2.mp4" type="video/mp4" />
+            Your browser does not support the video tag.
+          </video>
+          <p>Video Title 2</p>
+        </div>
+      </div>
+    </div>
+    
+    <div id="loginPrompt" class="login-prompt" style="display: none;">
+      <h2>Anda Belum Login</h2>
+      <p>Silakan login terlebih dahulu untuk mengakses video platform</p>
+      <a href="login.html" class="login-btn">Login Sekarang</a>
+      <p style="margin-top: 15px; font-size: 14px;">Belum punya akun? <a href="index.html">Daftar di sini</a></p>
+    </div>
+    
+    <p class="not-found" id="notFoundMessage">Mohon maaf, video yang Anda cari tidak ditemukan.</p>
+  </main>
+
+  <script>
+    // Supabase Configuration
+    const supabaseUrl = 'https://bksguejdlekzodfonqce.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJrc2d1ZWpkbGVrem9kZm9ucWNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE1NDQ5OTcsImV4cCI6MjA3NzEyMDk5N30.y2s2G1bM08wyVVDeVz35KWb5qtHIrml3QNFLnGmPQNY';
+    
+    // Initialize Supabase
+    window.supabase = supabase.createClient(supabaseUrl, supabaseKey);
+    console.log('Supabase initialized successfully!');
+    
+    // Fungsi untuk toggle mode gelap
+    function toggleMode() {
+      document.body.classList.toggle("dark-mode");
+    }
+    
+    // Fungsi untuk pencarian video
+    function searchVideos() {
+      let input = document.getElementById('search').value.toLowerCase();
+      let videos = document.querySelectorAll('.video-item');
+      let found = false;
+      videos.forEach(video => {
+        let title = video.getAttribute('data-title').toLowerCase();
+        if (title.includes(input)) {
+          video.style.display = 'block';
+          found = true;
+        } else {
+          video.style.display = 'none';
+        }
+      });
+      document.getElementById('notFoundMessage').style.display = found ? 'none' : 'block';
+    }
+    
+    // Fungsi untuk membuka video (placeholder)
+    function openVideo(src, title, description) {
+      alert(`Membuka video: ${title}\nDeskripsi: ${description}\nURL: ${src}`);
+      // Di sini Anda bisa menambahkan logika untuk membuka video di player yang lebih besar
+    }
+    
+    // Fungsi untuk logout
+    async function logout() {
+      try {
+        const { error } = await window.supabase.auth.signOut();
+        if (error) throw error;
+        
+        // Redirect ke halaman login atau refresh halaman
+        window.location.reload();
+      } catch (error) {
+        console.error('Error during logout:', error);
+        alert('Error saat logout: ' + error.message);
+      }
+    }
+    
+    // Fungsi untuk memeriksa status autentikasi
+    async function checkAuth() {
+      const userContent = document.getElementById('userContent');
+      const loginPrompt = document.getElementById('loginPrompt');
+      const authSection = document.getElementById('authSection');
+      
+      try {
+        const { data: { user }, error } = await window.supabase.auth.getUser();
+        
+        if (error) {
+          console.error('Auth check error:', error);
+          throw error;
+        }
+        
+        if (user) {
+          console.log('User authenticated:', user);
+          // Tampilkan konten untuk pengguna yang sudah login
+          userContent.style.display = 'block';
+          loginPrompt.style.display = 'none';
+          
+          // Update bagian autentikasi di header
+          const userInitial = user.email ? user.email.charAt(0).toUpperCase() : 'U';
+          authSection.innerHTML = `
+            <div class="user-info">
+              <div class="user-avatar">${userInitial}</div>
+              <span>${user.email}</span>
+            </div>
+            <button class="auth-btn logout-btn" onclick="logout()">Logout</button>
+          `;
+          
+        } else {
+          console.log('No user found');
+          // Tampilkan prompt login
+          userContent.style.display = 'none';
+          loginPrompt.style.display = 'block';
+          
+          // Update bagian autentikasi di header
+          authSection.innerHTML = `
+            <a href="login.html" class="auth-btn">Login</a>
+            <a href="index.html" class="auth-btn" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">Daftar</a>
+          `;
+        }
+        
+      } catch (error) {
+        console.error('Error in checkAuth:', error);
+        userContent.style.display = 'none';
+        loginPrompt.style.display = 'block';
+        
+        // Update bagian autentikasi di header
+        authSection.innerHTML = `
+          <a href="login.html" class="auth-btn">Login</a>
+          <a href="index.html" class="auth-btn" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">Daftar</a>
+        `;
+      }
+    }
+    
+    // Jalankan pemeriksaan autentikasi saat halaman dimuat
+    document.addEventListener('DOMContentLoaded', function() {
+      checkAuth();
+    });
+  </script>
+</body>
+</html>
